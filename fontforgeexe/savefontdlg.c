@@ -50,6 +50,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -1391,7 +1392,8 @@ return;
     if ( likecff || oldformatstate<=ff_cffcid ||
 	     (oldformatstate>=ff_otf && oldformatstate<=ff_otfciddfont) ||
         oldformatstate==ff_woff_otf || oldformatstate==ff_woff2_otf) {
-	if ( d->sf->ascent+d->sf->descent!=1000 && !psscalewarned ) {
+        //patch: disabled warning, it's annoying
+	if ( d->sf->ascent+d->sf->descent!=1000 && false && !psscalewarned ) {
 	    if ( gwwv_ask(_("Non-standard Em-Size"),(const char **) buts,0,1,_("The convention is that PostScript fonts should have an Em-Size of 1000. But this font has a size of %d. This is not an error, but you might consider altering the Em-Size with the Element->Font Info->General dialog.\nDo you wish to continue to generate your font in spite of this?"),
 		    d->sf->ascent+d->sf->descent)==1 )
 return;
@@ -1409,7 +1411,8 @@ return;
 	for ( bit=0x800000; bit!=0; bit>>=1 )
 	    if ( bit==val )
 	break;
-	if ( bit==0 && !ttfscalewarned ) {
+	//patch: disabled warning, it's annoying
+	if ( bit==0 && false && !ttfscalewarned ) {
 	    if ( gwwv_ask(_("Non-standard Em-Size"),(const char **) buts,0,1,_("The convention is that TrueType fonts should have an Em-Size which is a power of 2. But this font has a size of %d. This is not an error, but you might consider altering the Em-Size with the Element->Font Info->General dialog.\nDo you wish to continue to generate your font in spite of this?"),val)==1 )
 return;
 	    ttfscalewarned = true;
@@ -1972,6 +1975,159 @@ return( ti );
 }
 
 typedef SplineFont *SFArray[48];
+
+/* ---- Native (tinyfd) front end for File > Generate Fonts ----------------
+ * The real dialog is still built (DoSave() reads its gadgets), but it is never
+ * shown. tinyfd can't tell us which filter is selected,
+ * so the output format is worked out from the file name's extension.
+ */
+static int ZenEndsWith(const char *s, const char *suffix) {
+    size_t ls = strlen(s), lx = strlen(suffix);
+    return ls >= lx && strcasecmp(s + ls - lx, suffix) == 0;
+}
+
+/* Returns a format, or -1 if the extension isn't one we know. */
+static int ZenFormatFromName(const char *fn, SplineFont *sf, int layer) {
+    int iscid = sf->cidmaster != NULL;
+    int order2 = layer >= 0 && layer < sf->layer_cnt && sf->layers[layer].order2;
+
+    if ( ZenEndsWith(fn,".otf.dfont") )	return iscid ? ff_otfciddfont : ff_otfdfont;
+    if ( ZenEndsWith(fn,".cid.cff") )	return ff_cffcid;
+    if ( ZenEndsWith(fn,".woff2") )	return order2 ? ff_woff2_ttf : ff_woff2_otf;
+    if ( ZenEndsWith(fn,".woff") )	return order2 ? ff_woff_ttf : ff_woff_otf;
+    if ( ZenEndsWith(fn,".ufo3") )	return ff_ufo3;
+    if ( ZenEndsWith(fn,".ufo2") )	return ff_ufo2;
+    if ( ZenEndsWith(fn,".ufo") )	return ff_ufo;
+    if ( ZenEndsWith(fn,".ttf") )	return ff_ttf;
+    if ( ZenEndsWith(fn,".otf") )	return iscid ? ff_otfcid : ff_otf;
+    if ( ZenEndsWith(fn,".cff") )	return iscid ? ff_cffcid : ff_cff;
+    if ( ZenEndsWith(fn,".dfont") )	return ff_ttfdfont;
+    if ( ZenEndsWith(fn,".pfa") )	return ff_pfa;
+    if ( ZenEndsWith(fn,".pfb") )	return ff_pfb;
+    if ( ZenEndsWith(fn,".pt3") )	return ff_ptype3;
+    if ( ZenEndsWith(fn,".cid") )	return ff_cid;
+    if ( ZenEndsWith(fn,".t42") )	return ff_type42;
+    if ( ZenEndsWith(fn,".t11") )	return ff_type42cid;
+    if ( ZenEndsWith(fn,".svg") )	return ff_svg;
+    if ( ZenEndsWith(fn,".ps") )	return ff_ptype0;
+    return -1;
+}
+
+static const char *zen_filters[] = {
+    "TrueType (*.ttf) | *.ttf *.TTF",
+    "OpenType (*.otf) | *.otf *.OTF",
+    "WOFF (*.woff) | *.woff *.WOFF",
+    "WOFF2 (*.woff2) | *.woff2 *.WOFF2",
+    "PostScript Type 1 (*.pfa, *.pfb) | *.pfa *.PFA *.pfb *.PFB",
+    "Bare CFF (*.cff) | *.cff *.CFF",
+    "SVG font (*.svg) | *.svg *.SVG",
+    "UFO (*.ufo) | *.ufo *.UFO *.ufo2 *.ufo3",
+    "Mac dfont (*.dfont) | *.dfont *.DFONT",
+    "Other PostScript (*.pt3, *.t42, *.cid, *.ps) | *.pt3 *.t42 *.t11 *.cid *.ps",
+    NULL
+};
+
+/* Returns 1 if the native dialog handled the whole thing (result in d->ret),
+ * 0 if it isn't usable and the caller should show the normal dialog. */
+static int NativeGenerate(struct gfc_data *d, int ofs) {
+    SplineFont *master = d->sf->cidmaster ? d->sf->cidmaster : d->sf;
+    const char *base = master->defbasefilename!=NULL ? master->defbasefilename : master->fontname;
+    const char *defext = ".otf";
+    char *name, *filters[sizeof(zen_filters)/sizeof(zen_filters[0])+1];
+    const char *ext = (ofs>=0 && ofs<ff_none) ? savefont_extensions[ofs] : NULL;
+    int nf, i, first;
+
+    if ( ext!=NULL && ext[0]=='.' && strchr(ext+1,'.')==NULL )
+	defext = ext;		/* skips odd ones like "%s.pfb" and ".cid.cff" */
+
+    /* Put the filter matching the default extension first. */
+    first = 0;
+    for ( i=0; zen_filters[i]!=NULL; ++i ) {
+	char *pat = strstr(zen_filters[i]," | ");
+	char *hit = pat!=NULL ? strstr(pat,defext) : NULL;
+	if ( hit!=NULL && (hit[strlen(defext)]==' ' || hit[strlen(defext)]=='\0') ) {
+	    first = i;
+	break;
+	}
+    }
+    nf = 0;
+    filters[nf++] = (char *) zen_filters[first];
+    for ( i=0; zen_filters[i]!=NULL; ++i )
+	if ( i!=first )
+	    filters[nf++] = (char *) zen_filters[i];
+    filters[nf++] = "All files | *";
+    filters[nf] = NULL;
+
+    name = malloc(strlen(base)+strlen(defext)+1);
+    strcpy(name,base);
+    strcat(name,defext);
+
+    for (;;) {
+	int unavail = 0, fmt;
+	char *path, *msg;
+	unichar_t *upath;
+
+	path = FF_NativeFileChooserFilters(1,0,_("Generate Fonts"),name,
+		(const char *const *) filters,&unavail);
+	if ( unavail ) {
+	    free(name);
+return( 0 );
+	}
+	if ( path==NULL ) {		/* cancelled */
+	    d->ret = false;
+	    free(name);
+return( 1 );
+	}
+
+	/* No extension at all? Use the default format and add its extension. */
+	{
+	    const char *slash = strrchr(path,'/'), *dot = strrchr(path,'.');
+	    if ( dot==NULL || (slash!=NULL && dot<slash) || dot[1]=='\0' ) {
+		char *np = malloc(strlen(path)+strlen(defext)+1);
+		strcpy(np,path);
+		strcat(np,defext);
+		free(path);
+		path = np;
+	    }
+	}
+
+	fmt = ZenFormatFromName(path,d->sf,d->layer);
+	if ( fmt<0 || formattypes[fmt].disabled ) {
+	    msg = malloc(strlen(path)+400);
+	    if ( fmt<0 )
+		sprintf(msg,"Can't tell which font format to generate from the extension of:\n%s\n\n"
+			"Use one of: .ttf .otf .woff .woff2 .pfa .pfb .cff .svg .ufo .dfont .pt3 .t42 .cid",path);
+	    else
+		sprintf(msg,"That format isn't available for this font:\n%s",path);
+	    FF_NativeError("Generate Fonts",msg);
+	    free(msg);
+	    free(name);
+	    name = path;		/* offer the same name again */
+continue;
+	}
+
+	/* Drive the (hidden) dialog's gadgets so DoSave() sees what it expects */
+	GGadgetSelectOneListItem(d->pstype,fmt);
+	GGadgetSelectOneListItem(d->bmptype,bf_none);
+	if ( d->validate!=NULL )
+	    GGadgetSetChecked(d->validate,false);
+	GFD_FigureWhich(d);
+
+	upath = utf82u_copy(path);
+	DoSave(d,upath);
+	free(upath);
+
+	if ( d->done ) {		/* saved, or the validation window took over */
+	    free(path);
+	    free(name);
+return( 1 );
+	}
+	/* DoSave() bailed (error, or the user said No to a warning): let them
+	 * pick again, like the old dialog staying open would. */
+	free(name);
+	name = path;
+    }
+}
 
 int SFGenerateFont(SplineFont *sf,int layer,int family,EncMap *map) {
     GRect pos;
@@ -2670,6 +2826,11 @@ return( 0 );
     d.psotb_flags = old_ps_flags | (old_psotb_flags&~ps_flag_mask);
 
     GFD_FigureWhich(&d);
+
+    if ( family==gf_none && NativeGenerate(&d,ofs) ) {
+	GDrawDestroyWindow(gw);
+return(d.ret);
+    }
 
     GDrawSetVisible(gw,true);
     while ( !d.done )

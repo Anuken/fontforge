@@ -270,6 +270,13 @@ char *GWidgetSaveAsFileWithGadget8(const char *title, const char *defaultfile,
     char *utf8_ret;
     int i;
 
+    {
+	int unavail = 0;
+	char *zret = FF_NativeFileChooser(1, 0, title, defaultfile, NULL, &unavail);
+	if ( !unavail )
+return( zret );
+    }
+
     if ( title!=NULL )
 	tit = utf82u_copy(title);
     if ( defaultfile!=NULL )

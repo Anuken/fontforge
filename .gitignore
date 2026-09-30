@@ -17,5 +17,6 @@ tags
 
 __pycache__
 *.py[co]
-
+.idea/
+.vscode
 build-cpp/

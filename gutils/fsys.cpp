@@ -759,6 +759,22 @@ const char *getPixmapDir(void) {
     return pixmapdir;
 }
 
+/* Location of the theme's generated "resources" file. The file is produced by
+   configure_file() from resources.in, so in a development run (binary inside a
+   "build" directory) it lives in the build tree, not next to the icons in the
+   source tree. */
+const char *getThemeResourceFile(void) {
+    static char *resfile = NULL;
+    if (!resfile) {
+        if (devel_env) {
+            resfile = smprintf("%s/fontforgeexe/pixmaps/%s/resources", program_root, GUI_THEME);
+        } else {
+            resfile = smprintf("%s/resources", getPixmapDir());
+        }
+    }
+    return resfile;
+}
+
 const char *getHelpDir(void) {
     static char *helpdir=NULL;
     if (!helpdir) {

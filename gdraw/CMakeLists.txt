@@ -52,10 +52,16 @@ add_library(gdraw STATIC
   gtextinfo.c
   gwidgetP.h
   gwidgets.c
+  nativechooser.c
+  tinyfiledialogs.c
   hotkeys.c
 )
 
 target_link_libraries(gdraw PRIVATE fontforge)
+
+if(WIN32)
+  target_link_libraries(gdraw PRIVATE comdlg32 ole32)
+endif()
 
 if(APPLE)
   target_sources(gdraw PRIVATE ggdkcocoa.m)

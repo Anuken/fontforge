@@ -124,6 +124,7 @@ extern void  FindProgRoot(const char *prog);
 extern const char *getShareDir();
 extern const char *getLocaleDir(void);
 extern const char *getPixmapDir(void);
+extern const char *getThemeResourceFile(void);
 extern const char *getHelpDir(void);
 extern const char *getUserHomeDir(void);
 extern char *getFontForgeUserDir(int dir);

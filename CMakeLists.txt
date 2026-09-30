@@ -98,7 +98,7 @@ build_option(SPHINX_USE_VENV BOOL OFF "If building documentation and Sphinx\
  is not installed, try to install and use it from a python3 venv.")
 
 build_option(REAL_TYPE ENUM "double" "Sets the floating point type used." "double" "float")
-build_option(GUI_THEME     ENUM "tango"  "Sets the GUI theme." "tango" "2012")
+build_option(GUI_THEME     ENUM "dark"  "Sets the GUI theme." "tango" "2012" "dark")
 add_definitions( -DGUI_THEME="${GUI_THEME}" )
 
 build_option(FONT_FAMILIES_SERIF     STRING "default"  "Serif font family names to use in the UI separated by commas")

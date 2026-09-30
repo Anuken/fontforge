@@ -82,6 +82,13 @@ extern void GWidgetSetEH(GWindow w,GDrawEH e_h);
 extern void GWidgetFlowGadgets(GWindow gw);
 extern void GWidgetToDesiredSize(GWindow gw);
 
+	/* Native file chooser (tinyfiledialogs); see gdraw/nativechooser.c */
+char *FF_NativeFileChooser(int save, int multiple, const char *title,
+	const char *defaultfile, const char *filter_glob, int *unavailable);
+char *FF_NativeFileChooserFilters(int save, int multiple, const char *title,
+	const char *defaultfile, const char *const *filters, int *unavailable);
+void FF_NativeError(const char *title, const char *text);
+
 	/* Built in dialogs */
 char *GWidgetOpenFile8(const char *title, const char *defaultfile,
 	const char *initial_filter, char **mimetypes,GFileChooserFilterType filter);

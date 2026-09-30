@@ -203,6 +203,15 @@ char *GWidgetOpenFileWPath8(const char *title, const char *defaultfile,
     char *utf8_ret;
     int i;
 
+    {
+	int unavail = 0;
+	char *zret = FF_NativeFileChooser(0, 0, title,
+		defaultfile!=NULL ? defaultfile : (path!=NULL && path[0]!=NULL ? path[0] : NULL),
+		initial_filter, &unavail);
+	if ( !unavail )
+return( zret );
+    }
+
     if ( title!=NULL )
 	tit = utf82u_copy(title);
     if ( defaultfile!=NULL )

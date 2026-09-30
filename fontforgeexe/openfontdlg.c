@@ -626,6 +626,40 @@ static unichar_t *FVOpenFont(char *title, const char *defaultfile, bool mult, bo
     GTextInfo *namelistnames, **filts;
     int cnt;
 
+    {
+	GTextInfo **zf = StandardFilters();
+	int unavail = 0;
+	const char *glob = zf[default_font_filter_index]!=NULL ?
+		(const char *) zf[default_font_filter_index]->userdata : NULL;
+	char *zret = FF_NativeFileChooser(0, mult, title, defaultfile, glob, &unavail);
+	GTextInfoArrayFree(zf);
+	if ( !unavail ) {
+	    unichar_t *uret;
+	    char *multi, *p;
+	    size_t n;
+	    if ( zret==NULL )
+return( NULL );
+	    /* FontForge's multi-file format is "dir/first; second; third" */
+	    n = strlen(zret);
+	    multi = malloc(2*n+1);
+	    strcpy(multi, zret);
+	    p = strchr(multi, '\n');
+	    if ( p!=NULL ) {
+		char *rest = strdup(p+1), *line, *save = NULL;
+		*p = '\0';
+		for ( line=strtok_r(rest,"\n",&save); line!=NULL; line=strtok_r(NULL,"\n",&save) ) {
+		    char *slash = strrchr(line,'/');
+		    strcat(multi, "; ");
+		    strcat(multi, slash!=NULL ? slash+1 : line);
+		}
+		free(rest);
+	    }
+	    uret = utf82u_copy(multi);
+	    free(multi); free(zret);
+return( uret );
+	}
+    }
+
     memset(&d,'\0',sizeof(d));
 
     memset(&wattrs,0,sizeof(wattrs));

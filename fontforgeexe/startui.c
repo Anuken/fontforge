@@ -73,7 +73,7 @@
 #include "scripting.h"
 
 extern int AutoSaveFrequency;
-int splash = 1;
+int splash = 0;
 static int localsplash;
 static int unique = 0;
 
@@ -183,7 +183,7 @@ void ShowAboutScreen(void) {
 	GDrawResize(splashw,splashimagep->u.image->width,splashimagep->u.image->height+linecnt*fh);
 	first = false;
     }
-    
+
     if ( splasht!=NULL )
     GDrawCancelTimer(splasht);
     splasht=NULL;
@@ -394,7 +394,7 @@ static int splash_e_h(GWindow gw, GEvent *event) {
 	    y = splashimagep->u.image->height + as + fh/2;
 	    for ( i=1; i<linecnt; ++i ) {
 	    // The number 10 comes from lines[linecnt] created in the function SplashLayout. It refers
-	    // to the line at which we want to make the font monospace. If you add or remove a line, 
+	    // to the line at which we want to make the font monospace. If you add or remove a line,
 	    // you will need to change this.
 	    if (i == 10) {
 		    x = 8+GDrawDrawText(gw,8,y,lines[i-1]+1,0,splashfg);
@@ -673,7 +673,7 @@ int fontforge_main( int argc, char **argv ) {
         char path[MAX_PATH];
         unsigned int len = GetModuleFileNameA(NULL, path, MAX_PATH);
         path[len] = '\0';
-        
+
         //The '.exe' must be removed as resources presumes it's not there.
         GResourceSetProg(GFileRemoveExtension(GFileNormalizePath(path)));
     }
@@ -882,7 +882,7 @@ exit( 0 );
 	CleanAutoRecovery();
     else if ( recover )
 	any = DoAutoRecoveryExtended( recover-1 );
-			
+
     openflags = 0;
     for ( i=1; i<argc; ++i ) {
 	char *buffer = NULL;

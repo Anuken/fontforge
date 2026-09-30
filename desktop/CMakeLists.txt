@@ -1,13 +1,20 @@
 # Distributed under the original FontForge BSD 3-clause license
 
+# Themes without their own desktop icons (e.g. "dark") reuse the tango ones
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${GUI_THEME}/scalable")
+  set(_desktop_icon_theme "${GUI_THEME}")
+else()
+  set(_desktop_icon_theme "tango")
+endif()
+
 if(UNIX)
   install(FILES org.fontforge.FontForge.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
   install(FILES fontforge.xml DESTINATION ${CMAKE_INSTALL_DATADIR}/mime/packages)
 
   foreach(_size 16x16 22x22 24x24 32x32 48x48 64x64 128x128 256x256 512x512)
-    install(FILES "${GUI_THEME}/${_size}/org.fontforge.FontForge.png" DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/${_size}/apps)
+    install(FILES "${_desktop_icon_theme}/${_size}/org.fontforge.FontForge.png" DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/${_size}/apps)
   endforeach()
-  install(FILES "${GUI_THEME}/scalable/org.fontforge.FontForge.svg" DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
+  install(FILES "${_desktop_icon_theme}/scalable/org.fontforge.FontForge.svg" DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
 
   file(STRINGS "${PROJECT_SOURCE_DIR}/po/LINGUAS" _langs)
   foreach(_lang ${_langs})
