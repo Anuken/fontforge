@@ -752,6 +752,11 @@ const char *getPixmapDir(void) {
             char *theme_src = smprintf("%s/../fontforgeexe/pixmaps/%s", program_root, GUI_THEME);
             pixmapdir = GFileGetAbsoluteName(theme_src);
             free(theme_src);
+	} else if (GFileExists(FF_BUILD_PIXMAP_DIR)) {
+            /* Not in the build tree, but the tree this binary was built from
+               still exists: use its theme rather than whatever (possibly
+               stale or missing) install lives under the program root. */
+            pixmapdir = copy(FF_BUILD_PIXMAP_DIR);
 	} else {
             pixmapdir = smprintf("%s/pixmaps", getShareDir());
 	}
@@ -768,6 +773,8 @@ const char *getThemeResourceFile(void) {
     if (!resfile) {
         if (devel_env) {
             resfile = smprintf("%s/fontforgeexe/pixmaps/%s/resources", program_root, GUI_THEME);
+        } else if (GFileExists(FF_BUILD_RESOURCE_FILE)) {
+            resfile = copy(FF_BUILD_RESOURCE_FILE);
         } else {
             resfile = smprintf("%s/resources", getPixmapDir());
         }

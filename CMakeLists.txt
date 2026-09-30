@@ -98,8 +98,14 @@ build_option(SPHINX_USE_VENV BOOL OFF "If building documentation and Sphinx\
  is not installed, try to install and use it from a python3 venv.")
 
 build_option(REAL_TYPE ENUM "double" "Sets the floating point type used." "double" "float")
-build_option(GUI_THEME     ENUM "dark"  "Sets the GUI theme." "tango" "2012" "dark")
+build_option(GUI_THEME     ENUM "tango"  "Sets the GUI theme." "tango" "2012" "dark")
 add_definitions( -DGUI_THEME="${GUI_THEME}" )
+# Absolute build-tree locations of the selected theme, used as a fallback so the
+# theme is found even when the executable is moved out of build/bin.
+add_definitions(
+  -DFF_BUILD_PIXMAP_DIR="${CMAKE_SOURCE_DIR}/fontforgeexe/pixmaps/${GUI_THEME}"
+  -DFF_BUILD_RESOURCE_FILE="${CMAKE_BINARY_DIR}/fontforgeexe/pixmaps/${GUI_THEME}/resources"
+)
 
 build_option(FONT_FAMILIES_SERIF     STRING "default"  "Serif font family names to use in the UI separated by commas")
 build_option(FONT_FAMILIES_UI        STRING "default"  "Font family names to use in the UI separated by commas (typically sans-serif)")
